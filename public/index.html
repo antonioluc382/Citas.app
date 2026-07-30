@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Libreta de Citas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FAFAF7;
+    --paper-line:#E4DFD3;
+    --ink:#1D2B3A;
+    --ink-soft:#5B6A7C;
+    --muted:#8B94A3;
+    --agenda:#2F6F4E;
+    --agenda-soft:#E7F1EC;
+    --done:#B23A3A;
+    --done-soft:#F6E9E7;
+    --card:#FFFFFF;
+    --radius:2px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    background-image:
+      repeating-linear-gradient(var(--paper) 0 27px, var(--paper-line) 27px 28px);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:80px;
+  }
+  header{
+    padding:36px 20px 18px;
+    max-width:640px;
+    margin:0 auto;
+    transition:max-width .2s ease;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+  h1{
+    font-family:'Special Elite', monospace;
+    font-weight:400;
+    font-size:32px;
+    margin:6px 0 0;
+    letter-spacing:.01em;
+  }
+  main{
+    max-width:640px;
+    margin:0 auto;
+    padding:0 20px;
+  }
+  @media (min-width:860px){
+    header, main{ max-width:980px; }
+  }
+
+  /* --- Nueva cita --- */
+  .new-card{
+    background:var(--card);
+    border:1px solid var(--paper-line);
+    border-radius:var(--radius);
+    padding:16px;
+    margin:20px 0 28px;
+    box-shadow:0 1px 0 rgba(0,0,0,.03);
+  }
+  .new-card summary{
+    cursor:pointer;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    letter-spacing:.06em;
+    color:var(--agenda);
+    text-transform:uppercase;
+    outline:none;
+  }
+  form.fields{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-top:14px;
+  }
+  form.fields .full{grid-column:1 / -1;}
+  label{
+    font-size:11px;
+    color:var(--muted);
+    display:block;
+    margin-bottom:4px;
+    font-family:'IBM Plex Mono', monospace;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+  }
+  input,textarea{
+    width:100%;
+    border:1px solid var(--paper-line);
+    border-radius:var(--radius);
+    padding:9px 10px;
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:14px;
+    color:var(--ink);
+    background:var(--paper);
+  }
+  input:focus,textarea:focus{
+    outline:2px solid var(--agenda);
+    outline-offset:1px;
+  }
+  textarea{resize:vertical;min-height:44px;}
+  .btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    border:1px solid var(--ink);
+    background:var(--ink);
+    color:var(--paper);
+    padding:9px 14px;
+    border-radius:var(--radius);
+    cursor:pointer;
+  }
+  .btn:active{transform:translateY(1px);}
+  .btn.outline{
+    background:transparent;
+    color:var(--ink);
+  }
+  .btn.agenda{border-color:var(--agenda);background:var(--agenda);}
+  .btn.done{border-color:var(--done);background:var(--done);}
+  .btn.ghost{border-color:var(--paper-line);background:transparent;color:var(--muted);}
+  .full-actions{grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px;margin-top:2px;}
+
+  /* --- Sección --- */
+  .section-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin:26px 0 10px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .section-label::after{
+    content:"";
+    flex:1;
+    height:1px;
+    background:var(--paper-line);
+  }
+
+  /* --- Ticket card --- */
+  .ticket{
+    position:relative;
+    background:var(--card);
+    border:1px solid var(--paper-line);
+    border-radius:var(--radius);
+    margin-bottom:16px;
+    padding:16px 18px 16px 22px;
+    overflow:hidden;
+    transition:opacity .5s ease, transform .5s ease, max-height .5s ease, margin .5s ease, padding .5s ease;
+  }
+  .ticket::before{
+    content:"";
+    position:absolute;
+    left:0; top:0; bottom:0;
+    width:6px;
+    background-image:radial-gradient(circle at 3px 0, transparent 3px, var(--agenda) 3.5px);
+    background-size:6px 12px;
+    background-repeat:repeat-y;
+  }
+  .ticket.is-done::before{background-image:radial-gradient(circle at 3px 0, transparent 3px, var(--done) 3.5px);}
+  .ticket.leaving{opacity:0;transform:scale(.94) rotate(-1deg);max-height:0;margin:0;padding-top:0;padding-bottom:0;}
+
+  .ticket-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+  .ticket-title{font-family:'Special Elite', monospace;font-size:19px;line-height:1.25;}
+  .ticket-person{font-size:13px;color:var(--ink-soft);margin-top:2px;}
+  .stamp{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    border:1.5px solid var(--agenda);
+    color:var(--agenda);
+    padding:3px 7px;
+    border-radius:3px;
+    transform:rotate(-6deg);
+    white-space:nowrap;
+    flex-shrink:0;
+  }
+  .ticket.is-done .stamp{border-color:var(--done);color:var(--done);}
+  .stamp.stamp-overdue{border-color:var(--done);color:var(--done);}
+  .stamp.stamp-today{border-color:#B8862B;color:#B8862B;}
+
+  .ticket-meta{
+    display:flex;
+    gap:16px;
+    margin-top:10px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    color:var(--ink);
+  }
+  .ticket-meta .muted{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:1px;}
+  .ticket-notes{margin-top:10px;font-size:13px;color:var(--ink-soft);border-top:1px dashed var(--paper-line);padding-top:8px;}
+
+  .ticket-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;}
+  .ticket-actions .btn{padding:7px 11px;font-size:11px;}
+
+  .completed .ticket{opacity:.55;}
+  .completed .ticket-title{text-decoration:line-through;text-decoration-color:var(--done);}
+
+  .empty{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    color:var(--muted);
+    text-align:center;
+    padding:40px 10px;
+    border:1px dashed var(--paper-line);
+    border-radius:var(--radius);
+  }
+  .toast{
+    position:fixed;
+    left:50%;
+    bottom:24px;
+    transform:translateX(-50%);
+    background:var(--ink);
+    color:var(--paper);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    padding:10px 16px;
+    border-radius:var(--radius);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .3s ease;
+    max-width:88%;
+    text-align:center;
+  }
+  .toast.show{opacity:1;}
+
+  @media (max-width:480px){
+    form.fields{grid-template-columns:1fr;}
+  }
+
+  /* --- iPad / pantallas anchas: 2 columnas de boletos --- */
+  @media (min-width:860px){
+    .ticket-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:16px;
+      align-items:start;
+    }
+    .ticket{ margin-bottom:0; }
+    .new-card{ max-width:640px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="eyebrow">Libreta de recordatorios &middot; alimentada por Atajos</div>
+  <h1>Lo que se viene</h1>
+</header>
+
+<main>
+  <details class="new-card" id="newCard">
+    <summary>+ Agregar recordatorio manualmente</summary>
+    <form class="fields" id="newForm">
+      <div class="full">
+        <label for="f-title">¿Qué hay que hacer?</label>
+        <input id="f-title" required placeholder="Pagar renta / Cita Odontología / Tener $100 en Chase">
+      </div>
+      <div>
+        <label for="f-person">Persona o cuenta (opcional)</label>
+        <input id="f-person" placeholder="Antonio">
+      </div>
+      <div>
+        <label for="f-date">Fecha</label>
+        <input id="f-date" type="date" required>
+      </div>
+      <div>
+        <label for="f-time">Hora (opcional)</label>
+        <input id="f-time" type="time">
+      </div>
+      <div class="full">
+        <label for="f-notes">Notas</label>
+        <textarea id="f-notes" placeholder="Opcional"></textarea>
+      </div>
+      <div class="full-actions">
+        <button type="submit" class="btn agenda">Guardar recordatorio</button>
+      </div>
+    </form>
+  </details>
+
+  <div id="lists"></div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = "/.netlify/functions/appointments";
+const toastEl = document.getElementById("toast");
+let appointments = [];
+
+function toast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  setTimeout(()=>toastEl.classList.remove("show"), 2200);
+}
+
+function fmtDate(d){
+  const [y,m,day] = d.split("-");
+  const dt = new Date(Number(y), Number(m)-1, Number(day));
+  return dt.toLocaleDateString("es", { weekday:"short", day:"numeric", month:"short" });
+}
+function fmtTime(t){
+  if(!t) return "Todo el día";
+  const [h,m] = t.split(":").map(Number);
+  const period = h >= 12 ? "pm" : "am";
+  const h12 = ((h + 11) % 12) + 1;
+  return `${h12}:${String(m).padStart(2,"0")} ${period}`;
+}
+
+function todayISO(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+function addDaysISO(iso, days){
+  const [y,m,d] = iso.split("-").map(Number);
+  const dt = new Date(y, m-1, d + days);
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
+}
+
+async function load(){
+  const res = await fetch(API);
+  const data = await res.json();
+  appointments = data.appointments || [];
+  render();
+}
+
+function render(){
+  const today = todayISO();
+  const tomorrow = addDaysISO(today, 1);
+
+  const active = appointments.filter(a => a.status !== "done")
+    .sort((a,b) => (a.date + (a.time||"")).localeCompare(b.date + (b.time||"")));
+  const done = appointments.filter(a => a.status === "done")
+    .sort((a,b) => (b.date + (b.time||"")).localeCompare(a.date + (a.time||"")));
+
+  const groups = [
+    { key:"overdue", label:"Atrasados", items: active.filter(a => a.date < today), stamp:"Atrasado" },
+    { key:"today", label:"Hoy", items: active.filter(a => a.date === today), stamp:"Hoy" },
+    { key:"tomorrow", label:"Mañana", items: active.filter(a => a.date === tomorrow), stamp:"Mañana" },
+    { key:"upcoming", label:"Próximos días", items: active.filter(a => a.date > tomorrow), stamp:"Agendado" },
+  ];
+
+  const listsEl = document.getElementById("lists");
+  let html = "";
+
+  const hasActive = groups.some(g => g.items.length);
+  if(!hasActive){
+    html += `<div class="empty">No tienes recordatorios pendientes. Dicta uno desde tu Atajo o agrégalo arriba.</div>`;
+  } else {
+    groups.forEach(g => {
+      if(!g.items.length) return;
+      html += `<div class="section-label">${g.label}</div><div class="ticket-grid">${g.items.map(a => cardHTML(a, g.stamp)).join("")}</div>`;
+    });
+  }
+
+  html += `<div class="section-label">Completados</div>`;
+  html += done.length
+    ? `<div class="ticket-grid completed">${done.map(a => cardHTML(a, "Completado")).join("")}</div>`
+    : `<div class="empty">Aún no hay recordatorios completados.</div>`;
+
+  listsEl.innerHTML = html;
+}
+
+function cardHTML(a, stampLabel){
+  const isDone = a.status === "done";
+  const stampClass = stampLabel === "Atrasado" ? "stamp-overdue" : (stampLabel === "Hoy" ? "stamp-today" : "");
+  return `
+  <div class="ticket ${isDone ? "is-done" : ""}" data-id="${a.id}">
+    <div class="ticket-top">
+      <div>
+        <div class="ticket-title">${escapeHTML(a.title)}</div>
+        ${a.person ? `<div class="ticket-person">${escapeHTML(a.person)}</div>` : ""}
+      </div>
+      <div class="stamp ${stampClass}">${stampLabel}</div>
+    </div>
+    <div class="ticket-meta">
+      <div><span class="muted">Fecha</span>${fmtDate(a.date)}</div>
+      <div><span class="muted">Hora</span>${fmtTime(a.time)}</div>
+    </div>
+    ${a.notes ? `<div class="ticket-notes">${escapeHTML(a.notes)}</div>` : ""}
+    <div class="ticket-actions">
+      ${!isDone ? `<button class="btn agenda" onclick="addToCalendar('${a.id}')">Agregar al calendario</button>` : ""}
+      <button class="btn outline" onclick="editTicket('${a.id}')">Editar</button>
+      <button class="btn ${isDone ? "outline" : "done"}" onclick="toggleDone('${a.id}', ${!isDone})">${isDone ? "Reactivar" : "Completar"}</button>
+      <button class="btn ghost" onclick="removeTicket('${a.id}')">Borrar</button>
+    </div>
+  </div>`;
+}
+
+function escapeHTML(s){
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+async function toggleDone(id, makeDone){
+  await fetch(API, { method:"PUT", body: JSON.stringify({ id, status: makeDone ? "done" : "active" }) });
+  const el = document.querySelector(`.ticket[data-id="${id}"]`);
+  if(el){
+    el.classList.add("leaving");
+    setTimeout(load, 480);
+  } else {
+    load();
+  }
+  toast(makeDone ? "Recordatorio marcado como completado" : "Recordatorio reactivado");
+}
+
+async function removeTicket(id){
+  if(!confirm("¿Borrar este recordatorio definitivamente?")) return;
+  const el = document.querySelector(`.ticket[data-id="${id}"]`);
+  if(el) el.classList.add("leaving");
+  await fetch(`${API}?id=${encodeURIComponent(id)}`, { method:"DELETE" });
+  setTimeout(load, 480);
+  toast("Recordatorio borrado");
+}
+
+function editTicket(id){
+  const a = appointments.find(x => x.id === id);
+  if(!a) return;
+  const el = document.querySelector(`.ticket[data-id="${id}"]`);
+  el.innerHTML = `
+    <form class="fields" onsubmit="return saveEdit(event, '${id}')">
+      <div class="full">
+        <label>¿Qué hay que hacer?</label>
+        <input name="title" value="${escapeHTML(a.title)}" required>
+      </div>
+      <div>
+        <label>Persona o cuenta</label>
+        <input name="person" value="${escapeHTML(a.person || "")}">
+      </div>
+      <div></div>
+      <div>
+        <label>Fecha</label>
+        <input name="date" type="date" value="${a.date}" required>
+      </div>
+      <div>
+        <label>Hora (opcional)</label>
+        <input name="time" type="time" value="${a.time || ""}">
+      </div>
+      <div class="full">
+        <label>Notas</label>
+        <textarea name="notes">${escapeHTML(a.notes || "")}</textarea>
+      </div>
+      <div class="full-actions">
+        <button type="button" class="btn ghost" onclick="load()">Cancelar</button>
+        <button type="submit" class="btn agenda">Guardar cambios</button>
+      </div>
+    </form>`;
+}
+
+async function saveEdit(evt, id){
+  evt.preventDefault();
+  const f = evt.target;
+  const body = {
+    id,
+    title: f.title.value,
+    person: f.person.value,
+    date: f.date.value,
+    time: f.time.value,
+    notes: f.notes.value,
+  };
+  await fetch(API, { method:"PUT", body: JSON.stringify(body) });
+  toast("Cambios guardados");
+  load();
+  return false;
+}
+
+function addToCalendar(id){
+  const a = appointments.find(x => x.id === id);
+  if(!a) return;
+
+  let dtLines;
+  if(a.time){
+    const start = `${a.date.replace(/-/g,"")}T${a.time.replace(":","")}00`;
+    const startDate = new Date(`${a.date}T${a.time}:00`);
+    const endDate = new Date(startDate.getTime() + 60*60*1000);
+    const end = endDate.toISOString().replace(/[-:]/g,"").split(".")[0];
+    dtLines = [`DTSTART:${start}`, `DTEND:${end}`];
+  } else {
+    const startDay = a.date.replace(/-/g,"");
+    const endDay = addDaysISO(a.date, 1).replace(/-/g,"");
+    dtLines = [`DTSTART;VALUE=DATE:${startDay}`, `DTEND;VALUE=DATE:${endDay}`];
+  }
+
+  const ics = [
+    "BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Libreta de Recordatorios//ES","BEGIN:VEVENT",
+    `UID:${a.id}@libreta-recordatorios`,
+    `DTSTAMP:${new Date().toISOString().replace(/[-:]/g,"").split(".")[0]}Z`,
+    ...dtLines,
+    `SUMMARY:${a.title}${a.person ? " - " + a.person : ""}`,
+    a.notes ? `DESCRIPTION:${a.notes.replace(/\n/g," ")}` : "",
+    "END:VEVENT","END:VCALENDAR"
+  ].filter(Boolean).join("\r\n");
+
+  const blob = new Blob([ics], { type: "text/calendar" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${a.title.replace(/[^a-z0-9]/gi,"_")}.ics`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById("newForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const body = {
+    title: document.getElementById("f-title").value,
+    person: document.getElementById("f-person").value,
+    date: document.getElementById("f-date").value,
+    time: document.getElementById("f-time").value,
+    notes: document.getElementById("f-notes").value,
+  };
+  await fetch(API, { method:"POST", body: JSON.stringify(body) });
+  e.target.reset();
+  document.getElementById("newCard").open = false;
+  toast("Recordatorio guardado");
+  load();
+});
+
+load();
+</script>
+</body>
+</html>
