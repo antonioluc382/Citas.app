@@ -1,0 +1,9 @@
+{
+  "name": "citas-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "App de citas alimentada por Atajos de iPhone, con guardado en Netlify Blobs.",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
+}
