@@ -1,4 +1,6 @@
-const { getStore } = require("@netlify/blobs");
+const BIN_ID = process.env.JSONBIN_BIN_ID;
+const JSONBIN_KEY = process.env.JSONBIN_API_KEY;
+const BASE = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -18,6 +20,27 @@ function newId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+async function readAll() {
+  const res = await fetch(`${BASE}/latest`, {
+    headers: { "X-Master-Key": JSONBIN_KEY },
+  });
+  if (!res.ok) throw new Error(`JSONBin read error: ${res.status}`);
+  const data = await res.json();
+  return (data.record && data.record.appointments) || [];
+}
+
+async function writeAll(appointments) {
+  const res = await fetch(BASE, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Master-Key": JSONBIN_KEY,
+    },
+    body: JSON.stringify({ appointments }),
+  });
+  if (!res.ok) throw new Error(`JSONBin write error: ${res.status}`);
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: CORS, body: "" };
   if (event.httpMethod !== "POST") return json(405, { error: "Método no permitido." });
@@ -28,6 +51,9 @@ exports.handler = async (event) => {
       error:
         "Falta la variable de entorno ANTHROPIC_API_KEY en Netlify (Site settings > Environment variables).",
     });
+  }
+  if (!BIN_ID || !JSONBIN_KEY) {
+    return json(500, { error: "Faltan JSONBIN_BIN_ID o JSONBIN_API_KEY en las variables de entorno de Netlify." });
   }
 
   try {
@@ -90,9 +116,8 @@ exports.handler = async (event) => {
       });
     }
 
-    const id = newId();
     const appointment = {
-      id,
+      id: newId(),
       title: parsed.title || "Cita",
       person: parsed.person || "",
       date: parsed.date,
@@ -103,8 +128,9 @@ exports.handler = async (event) => {
       source: "shortcut",
     };
 
-    const s = getStore("appointments");
-    await s.set(id, JSON.stringify(appointment));
+    const items = await readAll();
+    items.push(appointment);
+    await writeAll(items);
 
     return json(201, { appointment });
   } catch (err) {
